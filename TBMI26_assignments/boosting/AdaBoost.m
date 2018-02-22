@@ -41,20 +41,20 @@ yTrain = [ones(1,nbrTrainExamples), -ones(1,nbrTrainExamples)]; % correct labels
 
 %% Implement the AdaBoost training here
 % Use your implementation of WeakClassifier and WeakClassifierError
-
+tic
 p = 1; % polarity
 T = 50; % number of weak classifiers 
-nbrImg = nbrTrainExamples*2;
-classified = zeros(1,nbrImg);
+nbrTrainImg = nbrTrainExamples*2;
+classified = zeros(1,nbrTrainImg);
 alpha = zeros(1,T);
-error = ones(nbrHaarFeatures,nbrImg);
-weights = ones(1,nbrImg)./(nbrImg);
+error = ones(nbrHaarFeatures,nbrTrainImg);
+weights = ones(1,nbrTrainImg)./(nbrTrainImg);
 minError = ones(1,T);
 bestThreshold = ones(1,T);
 P = ones(1,T);
 bestFeature = ones(1,T);
-bestClassifier = ones(T,nbrImg);
-wthreshold = 5/(nbrImg);
+bestClassifier = ones(T,nbrTrainImg);
+wthreshold = 5/(nbrTrainImg);
 
 % Find the best weak classifier among all features and all thresholds,
 % update weights and repeat
@@ -105,7 +105,7 @@ for k = 1:T
         weights = weights./sum(weights);
     end
 end
-
+trainingTime = toc
 %% Extract test data
 
 nbrTestExamples = 2000;
@@ -120,29 +120,47 @@ yTest = [ones(1,nbrTestExamples), -ones(1,nbrTestExamples)];
 %  You can evaluate on the training data if you want, but you CANNOT use
 %  this as a performance metric since it is biased. You MUST use the test
 %  data to truly evaluate the strong classifier.
-finalClassifier = zeros(T, nbrTestImg);
-finalClass = zeros(1, nbrImg);
+tic
+finalTrainClassifier = zeros(T, nbrTrainImg);
+finalTrainClassification = zeros(1, nbrTrainImg);
+trainError = zeros(1,T);
+trainAccuracy = zeros(1,T);
+
+finalTestClassifier = zeros(T, nbrTestImg);
+finalTestClassification = zeros(1, nbrTestImg);
 testError = zeros(1,T);
 testAccuracy = zeros(1,T);
+
 for j = 1:T % test using different amount of classifiers
     for k = 1:j % for each classifier
         % use only best feature for classification
         featureIndex = bestFeature(k);
         x = xTest(featureIndex,:);
-        finalClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x);
+        x2 = xTrain(featureIndex,:);
+        finalTestClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x);
+        finalTrainClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x2); % use previously saved classifications
     end
     % sum the columns of the classifications(each image)
     for i = 1:nbrTestImg 
-        finalClass(i) = sign(sum(finalClassifier(:,i)));
+        finalTestClassification(i) = sign(sum(finalTestClassifier(:,i)));
+        
+    end
+    for i = 1:nbrTrainImg
+        finalTrainClassification(i) = sign(sum(finalTrainClassifier(:,i)));
     end
 
-    testError(j) = abs(sum(finalClass(finalClass ~= yTest))/nbrTestImg);
+    testError(j) = sum(abs(finalTestClassification(finalTestClassification ~= yTest)/nbrTestImg));
     testAccuracy(j) = 1 - testError(j);
+    trainError(j) = sum(abs(finalTrainClassification(finalTrainClassification ~= yTrain)/nbrTrainImg));
+    trainAccuracy(j) = 1 - trainError(j);
 end
+testTime = toc
 %% Plot the error of the strong classifier as function of the number of weak classifiers.
 %  Note: you can find this error without re-training with a different
 %  number of weak classifiers.
 nc = 1:T;
 figure(4);
 plot(nc, testAccuracy);
+hold on
+plot(nc, trainAccuracy);
 
