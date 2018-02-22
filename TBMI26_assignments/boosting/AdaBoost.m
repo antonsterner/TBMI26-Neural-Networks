@@ -43,7 +43,7 @@ yTrain = [ones(1,nbrTrainExamples), -ones(1,nbrTrainExamples)]; % correct labels
 % Use your implementation of WeakClassifier and WeakClassifierError
 
 p = 1; % polarity
-T = 20; % number of weak classifiers 
+T = 50; % number of weak classifiers 
 nbrImg = nbrTrainExamples*2;
 classified = zeros(1,nbrImg);
 alpha = zeros(1,T);
@@ -122,22 +122,27 @@ yTest = [ones(1,nbrTestExamples), -ones(1,nbrTestExamples)];
 %  data to truly evaluate the strong classifier.
 finalClassifier = zeros(T, nbrTestImg);
 finalClass = zeros(1, nbrImg);
-for k = 1:T % for each classifier
-    % use only best feature for classification
-    featureIndex = bestFeature(k);
-    x = xTest(featureIndex,:);
-    finalClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x);
-end
-% sum the columns of the classifications
-for i = 1:nbrTestImg 
-    finalClass(i) = sign(sum(finalClassifier(:,i)));
-end
+testError = zeros(1,T);
+testAccuracy = zeros(1,T);
+for j = 1:T % test using different amount of classifiers
+    for k = 1:j % for each classifier
+        % use only best feature for classification
+        featureIndex = bestFeature(k);
+        x = xTest(featureIndex,:);
+        finalClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x);
+    end
+    % sum the columns of the classifications(each image)
+    for i = 1:nbrTestImg 
+        finalClass(i) = sign(sum(finalClassifier(:,i)));
+    end
 
-testError = sum(finalClass(finalClass ~= yTest))/nbrTestImg;
-testAccuracy = 1 - testError;
-
+    testError(j) = abs(sum(finalClass(finalClass ~= yTest))/nbrTestImg);
+    testAccuracy(j) = 1 - testError(j);
+end
 %% Plot the error of the strong classifier as function of the number of weak classifiers.
 %  Note: you can find this error without re-training with a different
 %  number of weak classifiers.
-
+nc = 1:T;
+figure(4);
+plot(nc, testAccuracy);
 
