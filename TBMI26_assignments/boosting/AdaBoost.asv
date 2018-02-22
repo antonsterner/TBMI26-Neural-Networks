@@ -128,12 +128,13 @@ for k = 1:T % for each classifier
     x = xTest(featureIndex,:);
     finalClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x);
 end
-% sum the columns of the classifications
+% sum the columns of the classifications(ea)
 for i = 1:nbrTestImg 
     finalClass(i) = sign(sum(finalClassifier(:,i)));
 end
 
-testAccuracy = sum(finalClass(finalClass ~= yTest))/;
+testError = sum(finalClass(finalClass ~= yTest))/nbrTestImg;
+testAccuracy = 1 - testError;
 
 %% Plot the error of the strong classifier as function of the number of weak classifiers.
 %  Note: you can find this error without re-training with a different
