@@ -43,7 +43,7 @@ yTrain = [ones(1,nbrTrainExamples), -ones(1,nbrTrainExamples)]; % correct labels
 % Use your implementation of WeakClassifier and WeakClassifierError
 tic
 p = 1; % polarity
-T = 50; % number of weak classifiers 
+T = 14; % number of weak classifiers 
 nbrTrainImg = nbrTrainExamples*2;
 classified = zeros(1,nbrTrainImg);
 alpha = zeros(1,T);
@@ -130,6 +130,9 @@ finalTestClassifier = zeros(T, nbrTestImg);
 finalTestClassification = zeros(1, nbrTestImg);
 testError = zeros(1,T);
 testAccuracy = zeros(1,T);
+rawClassification = zeros(T, nbrTestImg);
+
+%nbrWrongClassifications = zeros(T, nbrTestImg);
 
 for j = 1:T % test using different amount of classifiers
     for k = 1:j % for each classifier
@@ -138,23 +141,36 @@ for j = 1:T % test using different amount of classifiers
         x = xTest(featureIndex,:);
         x2 = xTrain(featureIndex,:);
         finalTestClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x);
+        rawClassification(k,:) = WeakClassifier(bestThreshold(k), P(k), x); % to be used to count the most commonly misclassified images 
         finalTrainClassifier(k,:) = alpha(k)*WeakClassifier(bestThreshold(k), P(k), x2); % use previously saved classifications
     end
     % sum the columns of the classifications(each image)
     for i = 1:nbrTestImg 
-        finalTestClassification(i) = sign(sum(finalTestClassifier(:,i)));
-        
+        finalTestClassification(i) = sign(sum(finalTestClassifier(:,i))); % strong classifier
     end
     for i = 1:nbrTrainImg
         finalTrainClassification(i) = sign(sum(finalTrainClassifier(:,i)));
     end
-
-    testError(j) = sum(abs(finalTestClassification(finalTestClassification ~= yTest)/nbrTestImg));
+    
+    testWrongClass = (finalTestClassification ~= yTest); % all indeces that differ, returns 1 if diff
+    testError(j) = sum(testWrongClass/nbrTestImg);
     testAccuracy(j) = 1 - testError(j);
-    trainError(j) = sum(abs(finalTrainClassification(finalTrainClassification ~= yTrain)/nbrTrainImg));
+        
+    trainWrongClass = (finalTrainClassification ~= yTrain);
+    trainError(j) = sum(trainWrongClass/nbrTrainImg);
     trainAccuracy(j) = 1 - trainError(j);
+    
 end
 testTime = toc
+
+% count the most commonly misclassified images
+wrong = zeros(T,nbrTestImg);
+for i = 1:T
+   wrong(i,:) = (rawClassification(i,:) ~= yTest); 
+end
+
+[nbrWrongClassifications, wrongID] = sort(sum(wrong),'descend'); 
+
 %% Plot the error of the strong classifier as function of the number of weak classifiers.
 %  Note: you can find this error without re-training with a different
 %  number of weak classifiers.
@@ -163,4 +179,21 @@ figure(4);
 plot(nc, testAccuracy);
 hold on
 plot(nc, trainAccuracy);
+legend('Test Accuracy', 'Training Accuracy')
+
+% plot most wrongly classified images 
+
+figure(1);
+colormap gray;
+for k=1:25
+    if(wrongID(k) < nbrTestExamples)
+        subplot(5,5,k), imagesc(faces(:,:,wrongID(k)));
+    else
+        subplot(5,5,k), imagesc(nonfaces(:,:,wrongID(k)));
+    end
+    axis image;
+    axis off;
+end
+
+
 
