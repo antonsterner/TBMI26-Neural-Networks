@@ -1,3 +1,4 @@
+% antst719, rasst403
 % Load face and non-face data and plot a few examples
 load faces;
 load nonfaces;
@@ -21,7 +22,7 @@ for k=1:25
 end
 
 % Generate Haar feature masks
-nbrHaarFeatures = 25;
+nbrHaarFeatures = 100;
 haarFeatureMasks = GenerateHaarFeatureMasks(nbrHaarFeatures);
 
 figure(3);
@@ -34,7 +35,7 @@ end
 
 % Create a training data set with a number of training data examples
 % from each class. Non-faces = class label y=-1, faces = class label y=1
-nbrTrainExamples = 1000;
+nbrTrainExamples = 500;
 trainImages = cat(3,faces(:,:,1:nbrTrainExamples),nonfaces(:,:,1:nbrTrainExamples));
 xTrain = ExtractHaarFeatures(trainImages,haarFeatureMasks); % result of Haar features applied to images
 yTrain = [ones(1,nbrTrainExamples), -ones(1,nbrTrainExamples)]; % correct labels, 1 for face, -1 for non face
@@ -43,7 +44,7 @@ yTrain = [ones(1,nbrTrainExamples), -ones(1,nbrTrainExamples)]; % correct labels
 % Use your implementation of WeakClassifier and WeakClassifierError
 tic
 p = 1; % polarity
-T = 14; % number of weak classifiers 
+T = 50; % number of weak classifiers 
 nbrTrainImg = nbrTrainExamples*2;
 classified = zeros(1,nbrTrainImg);
 alpha = zeros(1,T);
@@ -58,19 +59,18 @@ wthreshold = 5/(nbrTrainImg);
 
 % Find the best weak classifier among all features and all thresholds,
 % update weights and repeat
-% for each weak classifier
-%   for each Haar feature
-%       for each threshold tau
-for k = 1:T
-    for i = 1:nbrHaarFeatures
-        x = xTrain(i,:);
-        for j = 1:length(xTrain)
-            tau = x(j);    
+
+
+
+for k = 1:T % for each weak classifier
+    for i = 1:nbrHaarFeatures % for each Haar feature
+        x = xTrain(i,:); 
+        for j = 1:length(xTrain) % for each threshold tau
+            tao = x(j); % threshold
             % classify images for each threshold
-            classified = WeakClassifier(tau, p, x);
+            classified = WeakClassifier(tao, p, x);
             
-            % calculate error of classification
-            %wsize = size(weights(i,:,k));
+            % calculate weighted error of classification
             error(i,j) = WeakClassifierError(classified, weights, yTrain);
             
             % switch polarity if error > 0.5
@@ -80,11 +80,12 @@ for k = 1:T
                classified = -classified;
             end
             
-            % save best classifier
+            % save best classifier, smallest error, best threshold,
+            % feature and polarity
             if(error(i,j) < minError(k))
                bestClassifier(k,:) = classified;
                minError(k) = error(i,j); 
-               bestThreshold(k) = tau;
+               bestThreshold(k) = tao;
                bestFeature(k) = i;
                P(k) = p;
             end
@@ -94,7 +95,7 @@ for k = 1:T
     alpha(1,k) = 0.5 * log((1-minError(1,k))/minError(1,k));
     
     % update weights, 
-    % if statement to not exceed matrix dimensions of weights
+    % if statement to not update weights in the last iteration
     if(k < T)
         weights = weights.*exp(alpha(k)*-(yTrain.*bestClassifier(k,:)));
         % trim weights exceeding 5 times original weight
@@ -108,7 +109,7 @@ end
 trainingTime = toc
 %% Extract test data
 
-nbrTestExamples = 2000;
+nbrTestExamples = 3000;
 nbrTestImg = nbrTestExamples*2;
 
 testImages  = cat(3,faces(:,:,(nbrTrainExamples+1):(nbrTrainExamples+nbrTestExamples)),...
@@ -130,9 +131,8 @@ finalTestClassifier = zeros(T, nbrTestImg);
 finalTestClassification = zeros(1, nbrTestImg);
 testError = zeros(1,T);
 testAccuracy = zeros(1,T);
-rawClassification = zeros(T, nbrTestImg);
+rawClassification = zeros(T, nbrTestImg); % to be used to count the most commonly misclassified images 
 
-%nbrWrongClassifications = zeros(T, nbrTestImg);
 
 for j = 1:T % test using different amount of classifiers
     for k = 1:j % for each classifier
@@ -171,8 +171,11 @@ end
 
 [nbrWrongClassifications, wrongID] = sort(sum(wrong),'descend'); 
 
-%% Plot the error of the strong classifier as function of the number of weak classifiers.
-%  Note: you can find this error without re-training with a different
+% save max accuracy, and the number of weak classifiers used
+[max_accuracy, nbrWeakClassifiers] = max(testAccuracy);
+
+%% Plot the accuracy of the strong classifier as function of the number of weak classifiers.
+%  Note: you can find this accuracy without re-training with a different
 %  number of weak classifiers.
 nc = 1:T;
 figure(4);
@@ -180,10 +183,11 @@ plot(nc, testAccuracy);
 hold on
 plot(nc, trainAccuracy);
 legend('Test Accuracy', 'Training Accuracy')
+xlabel('Number of classifiers')
+ylabel('Accuracy')
 
-% plot most wrongly classified images 
-
-figure(1);
+% plot 25 most commonly misclassified images 
+figure(5);
 colormap gray;
 for k=1:25
     if(wrongID(k) < nbrTestExamples)
@@ -194,6 +198,3 @@ for k=1:25
     axis image;
     axis off;
 end
-
-
-

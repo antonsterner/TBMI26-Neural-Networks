@@ -9,6 +9,6 @@ function E = WeakClassifierError(C, D, Y)
 % This is for your own benefit, since a loop will be too slow to use
 % with a reasonable amount of Haar features and training images.
     
+% sum of the weighted error
 E = sum(abs(D(C ~= Y).*C(C ~= Y)));
 end
-

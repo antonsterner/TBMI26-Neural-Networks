@@ -51,18 +51,15 @@ else
   GWPOS = next_position;
 end
 
-if GWFEED(GWPOS(1),GWPOS(2)) == 0.1234;
+if GWFEED(GWPOS(1),GWPOS(2)) == 0.1234
   GWPOS = [6 14]';
 end
-
-    
-    
 
 GWLASTFEED = GWFEED(GWPOS(1),GWPOS(2));
 
 s = gwstate;
 if GWDYN > 0
-  if s.feedback == 10;
+  if s.feedback == 10
     p = size(GWFMAPS,3);
     q = GWDYN - 1;
     q = mod(q + 1,p);
