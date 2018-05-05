@@ -9,7 +9,6 @@ function C = WeakClassifier(T, P, X)
 % This is for your own benefit, since a loop will be too slow to use
 % with a reasonable amount of Haar features and training images.
 
-C = ones(1, length(X)); % create a vector of 1s
-C(P.*X(:) < T) = -1; % for all values in X below the threshold T, set to -1 
-    
+C = ones(size(X)); % create a vector of 1s
+C(P.*X < P.*T) = -1; % for all values in X below the threshold T, set to -1 
 end
